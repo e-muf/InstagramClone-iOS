@@ -31,9 +31,25 @@ class ProfileController: UICollectionViewController {
         super.viewDidLoad()
         
         configureCollectionView()
+        checkIfUserIsFollowed()
+        fetchUserStats()
     }
     
     // MARK: - API
+    
+    func checkIfUserIsFollowed() {
+        UserService.checkIfUserIsFollowed(uid: user.uid) { isFollowed in
+            self.user.isFollowed = isFollowed
+            self.collectionView.reloadData()
+        }
+    }
+    
+    func fetchUserStats() {
+        UserService.fetchUserStats(uid: user.uid) { stats in
+            self.user.stats = stats
+            self.collectionView.reloadData()
+        }
+    }
     
     
     // MARK: - Helpers
@@ -63,6 +79,7 @@ extension ProfileController {
         let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: headerIdentifier, for: indexPath) as! ProfileHeader
         
         header.viewModel = ProfileHeaderViewModel(user: user)
+        header.delegate = self
         
         return header
     }
@@ -93,4 +110,26 @@ extension ProfileController: UICollectionViewDelegateFlowLayout {
     }
     
     
+}
+
+// MARK: - ProfileHeaderDelegate
+
+extension ProfileController: ProfileHeaderDelegate {
+    func header(_ profileHeader: ProfileHeader, didTapActionButtonFor user: User) {
+        
+        if user.isCurrentUser {
+            print("DEBUG: Show edit profile here...")
+        } else if user.isFollowed {
+            UserService.unfollow(uid: user.uid) { error in
+                self.user.isFollowed = false
+                self.collectionView.reloadData()
+            }
+        } else {
+            UserService.follow(uid: user.uid) { error in
+                self.user.isFollowed = true
+                self.collectionView.reloadData()
+            }
+        }
+        
+    }
 }
